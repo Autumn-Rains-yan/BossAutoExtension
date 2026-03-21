@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Boss AI Agent",
+  "version": "2.0.0",
+  "description": "在浏览器插件中完成简历上传、AI 整理、岗位匹配与 Boss 自动沟通。",
+  "permissions": ["tabs", "storage"],
+  "host_permissions": ["https://www.zhipin.com/*", "https://api.deepseek.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Boss AI Agent Collector"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.zhipin.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["inject.js"],
+      "matches": ["https://www.zhipin.com/*"]
+    }
+  ]
+}

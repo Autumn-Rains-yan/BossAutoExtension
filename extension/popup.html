@@ -1,0 +1,831 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Boss AI Agent</title>
+    <style>
+      :root {
+        --bg: #f4eee4;
+        --bg-accent: #fde8d6;
+        --card: rgba(255, 253, 249, 0.94);
+        --card-strong: #fffaf2;
+        --line: rgba(44, 53, 65, 0.12);
+        --text: #1f2430;
+        --muted: #667085;
+        --primary: #ff7a45;
+        --primary-deep: #d95824;
+        --teal: #187c7a;
+        --danger: #b93830;
+        --shadow: 0 20px 40px rgba(110, 76, 40, 0.15);
+        --radius-lg: 24px;
+        --radius-md: 18px;
+        --radius-sm: 12px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-width: 368px;
+        background:
+          radial-gradient(circle at top right, rgba(255, 154, 94, 0.26), transparent 34%),
+          radial-gradient(circle at top left, rgba(24, 124, 122, 0.18), transparent 32%),
+          linear-gradient(180deg, #fbf4ea 0%, var(--bg) 100%);
+        color: var(--text);
+        font-family:
+          "Avenir Next",
+          "Segoe UI Variable",
+          "PingFang SC",
+          "Hiragino Sans GB",
+          sans-serif;
+      }
+
+      body {
+        padding: 10px;
+      }
+
+      .app {
+        display: grid;
+        gap: 10px;
+      }
+
+      .hero,
+      .card {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        background: var(--card);
+        box-shadow: 0 16px 30px rgba(110, 76, 40, 0.14);
+        backdrop-filter: blur(16px);
+      }
+
+      .hero {
+        padding: 14px;
+        background:
+          linear-gradient(135deg, rgba(255, 245, 230, 0.96), rgba(255, 253, 248, 0.95)),
+          var(--card);
+      }
+
+      .hero::after {
+        content: "";
+        position: absolute;
+        inset: auto -30px -52px auto;
+        width: 132px;
+        height: 132px;
+        border-radius: 999px;
+        background: radial-gradient(circle, rgba(255, 122, 69, 0.18), transparent 68%);
+        pointer-events: none;
+      }
+
+      .hero__top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: rgba(24, 124, 122, 0.1);
+        color: var(--teal);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .hero h1 {
+        margin: 8px 0 0;
+        font-size: 20px;
+        line-height: 1.1;
+      }
+
+      .hero p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .hero__intro {
+        margin-top: 8px;
+        max-width: 300px;
+      }
+
+      .hero__status {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 10px;
+      }
+
+      .card {
+        padding: 12px;
+        background: linear-gradient(180deg, rgba(255, 252, 247, 0.96), rgba(255, 255, 255, 0.92));
+      }
+
+      .card--collapsible {
+        padding: 0;
+      }
+
+      .section-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .section-head h2 {
+        margin: 0;
+        font-size: 15px;
+      }
+
+      .section-head p {
+        margin: 3px 0 0;
+        font-size: 11px;
+        line-height: 1.45;
+        color: var(--muted);
+      }
+
+      .section-toggle {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px;
+        cursor: pointer;
+        list-style: none;
+        user-select: none;
+      }
+
+      .section-toggle::-webkit-details-marker {
+        display: none;
+      }
+
+      .section-toggle::marker {
+        content: "";
+      }
+
+      .section-toggle:focus-visible {
+        outline: 2px solid rgba(255, 122, 69, 0.22);
+        outline-offset: -2px;
+      }
+
+      .section-toggle__copy {
+        min-width: 0;
+      }
+
+      .section-toggle__copy h2 {
+        margin: 0;
+        font-size: 15px;
+      }
+
+      .section-toggle__copy p {
+        margin: 3px 0 0;
+        font-size: 11px;
+        line-height: 1.45;
+        color: var(--muted);
+      }
+
+      .section-toggle__meta {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+
+      .section-toggle__arrow {
+        position: relative;
+        width: 28px;
+        height: 28px;
+        border-radius: 10px;
+        border: 1px solid rgba(44, 53, 65, 0.1);
+        background: rgba(255, 255, 255, 0.84);
+        box-shadow: 0 8px 18px rgba(31, 36, 48, 0.08);
+      }
+
+      .section-toggle__arrow::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 8px;
+        height: 8px;
+        border-right: 1.8px solid currentColor;
+        border-bottom: 1.8px solid currentColor;
+        transform: translate(-50%, -70%) rotate(45deg);
+        transition: transform 160ms ease;
+      }
+
+      .card--collapsible[open] .section-toggle {
+        border-bottom: 1px solid var(--line);
+      }
+
+      .card--collapsible[open] .section-toggle__arrow::before {
+        transform: translate(-50%, -30%) rotate(225deg);
+      }
+
+      .card__body {
+        padding: 10px 12px 12px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 26px;
+        padding: 4px 9px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .pill::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: currentColor;
+        opacity: 0.85;
+      }
+
+      .pill--neutral {
+        background: rgba(102, 112, 133, 0.08);
+        border-color: rgba(102, 112, 133, 0.15);
+        color: var(--muted);
+      }
+
+      .pill--running {
+        background: rgba(24, 124, 122, 0.12);
+        border-color: rgba(24, 124, 122, 0.22);
+        color: var(--teal);
+      }
+
+      .pill--stopped {
+        background: rgba(185, 56, 48, 0.1);
+        border-color: rgba(185, 56, 48, 0.18);
+        color: var(--danger);
+      }
+
+      .pill--ready {
+        background: rgba(255, 122, 69, 0.12);
+        border-color: rgba(255, 122, 69, 0.2);
+        color: var(--primary-deep);
+      }
+
+      .meta-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .meta-card {
+        padding: 10px;
+        border: 1px solid rgba(44, 53, 65, 0.08);
+        border-radius: var(--radius-md);
+        background: var(--card-strong);
+      }
+
+      .meta-card span {
+        display: block;
+        font-size: 10px;
+        color: var(--muted);
+      }
+
+      .meta-card strong {
+        display: block;
+        margin-top: 5px;
+        font-size: 13px;
+        line-height: 1.35;
+      }
+
+      .button-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .button-grid--single {
+        grid-template-columns: 1fr;
+      }
+
+      button,
+      input,
+      textarea {
+        font: inherit;
+      }
+
+      button {
+        position: relative;
+        min-height: 38px;
+        padding: 9px 12px;
+        border: 1px solid transparent;
+        border-radius: 12px;
+        cursor: pointer;
+        transition:
+          transform 160ms ease,
+          box-shadow 160ms ease,
+          border-color 160ms ease,
+          background 160ms ease,
+          color 160ms ease;
+      }
+
+      button:hover:not(:disabled) {
+        transform: translateY(-1px);
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.62;
+        transform: none;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, var(--primary), #ff9a5f);
+        color: #fff;
+        box-shadow: 0 12px 24px rgba(255, 122, 69, 0.24);
+      }
+
+      .btn-secondary {
+        background: rgba(24, 124, 122, 0.08);
+        border-color: rgba(24, 124, 122, 0.18);
+        color: var(--teal);
+      }
+
+      .btn-ghost {
+        background: rgba(255, 255, 255, 0.76);
+        border-color: rgba(44, 53, 65, 0.12);
+        color: var(--text);
+      }
+
+      .btn-danger {
+        background: rgba(185, 56, 48, 0.08);
+        border-color: rgba(185, 56, 48, 0.18);
+        color: var(--danger);
+      }
+
+      .control-btn {
+        min-width: 94px;
+        padding-inline: 14px;
+        border-radius: 999px;
+        white-space: nowrap;
+      }
+
+      .btn-block {
+        width: 100%;
+      }
+
+      .input-grid {
+        display: grid;
+        gap: 10px;
+      }
+
+      .input-row {
+        display: grid;
+        gap: 6px;
+      }
+
+      .input-row label {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--muted);
+      }
+
+      .input-row input,
+      .input-row textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid rgba(44, 53, 65, 0.12);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.84);
+        color: var(--text);
+        transition:
+          border-color 160ms ease,
+          box-shadow 160ms ease,
+          background 160ms ease;
+      }
+
+      .input-row input:focus,
+      .input-row textarea:focus {
+        outline: none;
+        border-color: rgba(255, 122, 69, 0.45);
+        box-shadow: 0 0 0 4px rgba(255, 122, 69, 0.12);
+        background: #fff;
+      }
+
+      .input-inline {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+      }
+
+      .input-inline--apikey {
+        align-items: center;
+      }
+
+      .input-shell {
+        position: relative;
+      }
+
+      #apiKeyInput {
+        padding-right: 42px;
+      }
+
+      .icon-btn {
+        position: absolute;
+        top: 50%;
+        right: 7px;
+        width: 30px;
+        min-height: 30px;
+        padding: 0;
+        border-radius: 10px;
+        border-color: rgba(44, 53, 65, 0.08);
+        background: rgba(255, 255, 255, 0.9);
+        color: var(--muted);
+        transform: translateY(-50%);
+        box-shadow: 0 8px 18px rgba(31, 36, 48, 0.08);
+      }
+
+      .icon-btn:hover:not(:disabled) {
+        transform: translateY(-50%) scale(1.02);
+      }
+
+      .icon-btn:disabled {
+        transform: translateY(-50%);
+      }
+
+      .icon-btn svg {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .icon-btn[aria-pressed="true"] {
+        color: var(--primary-deep);
+      }
+
+      textarea {
+        min-height: 104px;
+        resize: vertical;
+        line-height: 1.55;
+      }
+
+      .compact-textarea {
+        min-height: 78px;
+      }
+
+      .helper {
+        font-size: 11px;
+        line-height: 1.45;
+        color: var(--muted);
+      }
+
+      .resume-actions,
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .resume-actions {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+      }
+
+      .resume-actions button {
+        min-height: 34px;
+        padding: 7px 4px;
+        font-size: 11px;
+        white-space: nowrap;
+      }
+
+      .highlights {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .highlights li {
+        padding: 6px 9px;
+        border: 1px solid rgba(255, 122, 69, 0.14);
+        border-radius: 999px;
+        background: rgba(255, 122, 69, 0.08);
+        color: var(--primary-deep);
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .highlights--empty {
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .textarea-meta {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 4px;
+        font-size: 10px;
+        color: var(--muted);
+      }
+
+      #logs {
+        min-height: 136px;
+        max-height: 180px;
+        overflow: auto;
+        margin: 0;
+        padding: 12px;
+        border-radius: 14px;
+        background:
+          linear-gradient(180deg, rgba(30, 33, 42, 0.96), rgba(23, 25, 33, 0.98));
+        color: #f6f7fb;
+        font-size: 10.5px;
+        line-height: 1.55;
+        white-space: pre-wrap;
+        word-break: break-word;
+        border: 1px solid rgba(255, 255, 255, 0.04);
+      }
+
+      .hint-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .subtle {
+        color: var(--muted);
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <section class="hero">
+        <div class="hero__top">
+          <div>
+            <div class="eyebrow">Boss AI Agent</div>
+            <h1>求职自动化控制台</h1>
+          </div>
+          <button id="controlBtn" class="btn-primary control-btn" type="button">
+            开始执行
+          </button>
+        </div>
+        <p class="hero__intro">
+          简历、插件配置和自动沟通都集中在插件里管理。
+        </p>
+        <div class="hero__status">
+          <span id="runStatusPill" class="pill pill--neutral">状态检查中</span>
+          <span id="pageStatusPill" class="pill pill--neutral">未连接 Boss 页面</span>
+          <span id="resumeStatusPill" class="pill pill--neutral">简历未就绪</span>
+        </div>
+      </section>
+
+      <details class="card card--collapsible">
+        <summary class="section-toggle">
+          <div class="section-toggle__copy">
+            <h2>运行概览</h2>
+            <p>右上角按钮负责启动或停止，下面保留常用辅助操作。</p>
+          </div>
+          <span class="section-toggle__meta">
+            <span class="section-toggle__arrow" aria-hidden="true"></span>
+          </span>
+        </summary>
+        <div class="card__body">
+          <div class="meta-grid">
+            <div class="meta-card">
+              <span>当前标签页</span>
+              <strong id="pageSummary">检测中</strong>
+            </div>
+            <div class="meta-card">
+              <span>执行阶段</span>
+              <strong id="phaseSummary">等待连接</strong>
+            </div>
+            <div class="meta-card">
+              <span>简历来源</span>
+              <strong id="resumeSummary">尚未上传</strong>
+            </div>
+            <div class="meta-card">
+              <span>插件配置</span>
+              <strong id="configSummary">待配置</strong>
+            </div>
+          </div>
+          <div class="button-grid">
+            <button id="openBossBtn" class="btn-secondary" type="button">
+              打开职位列表
+            </button>
+            <button id="refreshStatusBtn" class="btn-ghost" type="button">
+              刷新状态
+            </button>
+            <button id="clearPageStorage" class="btn-ghost" type="button">
+              清空岗位缓存
+            </button>
+            <button id="refreshLogs" class="btn-ghost" type="button">
+              刷新日志
+            </button>
+          </div>
+          <div class="button-grid button-grid--single">
+            <button id="clearLogs" class="btn-ghost btn-block" type="button">
+              清空日志
+            </button>
+          </div>
+        </div>
+      </details>
+
+      <details class="card card--collapsible">
+        <summary class="section-toggle">
+          <div class="section-toggle__copy">
+            <h2>插件配置</h2>
+            <p>在这里填写 API Key、城市 ID 和搜索关键词，脚本会按配置轮换执行。</p>
+          </div>
+          <span class="section-toggle__meta">
+            <span class="section-toggle__arrow" aria-hidden="true"></span>
+          </span>
+        </summary>
+        <div class="card__body">
+          <div class="input-grid">
+            <div class="input-row">
+              <label for="apiKeyInput">DeepSeek API Key</label>
+              <div class="input-inline input-inline--apikey">
+                <div class="input-shell">
+                  <input id="apiKeyInput" type="password" placeholder="sk-..." />
+                  <button
+                    id="apiKeyEyeBtn"
+                    class="icon-btn"
+                    type="button"
+                    aria-label="显示 API Key"
+                    aria-pressed="false"
+                    title="显示 API Key"
+                  ></button>
+                </div>
+                <button id="saveSettingsBtn" class="btn-primary" type="button">
+                  保存配置
+                </button>
+              </div>
+            </div>
+            <div class="input-row">
+              <label for="cityIdsInput">城市 ID 列表</label>
+              <textarea
+                id="cityIdsInput"
+                class="compact-textarea"
+                placeholder="例如：101250100&#10;101280600"
+              ></textarea>
+              <div class="helper">
+                每行一个，或使用逗号分隔。获取方式：先在 Boss 职位列表页切到目标城市，地址栏里的
+                city=101250100 就是 cityId；也可以直接把整段职位列表 URL 粘贴进来，插件会自动提取。
+              </div>
+            </div>
+            <div class="input-row">
+              <label for="searchKeywordsInput">搜索关键词</label>
+              <textarea
+                id="searchKeywordsInput"
+                class="compact-textarea"
+                placeholder="例如：AI应用工程师&#10;AI Agent"
+              ></textarea>
+              <div class="helper">
+                每行一个，或使用逗号分隔。至少保留 1 个关键词，脚本才允许启动。
+              </div>
+            </div>
+            <div class="input-row">
+              <label for="maxJobClicksInput">本次运行总点击上限</label>
+              <input
+                id="maxJobClicksInput"
+                type="number"
+                min="1"
+                max="300"
+                step="1"
+                placeholder="默认 30"
+              />
+              <div class="helper">
+                用于限制从“开始执行”到“停止执行”这一整次运行里，累计最多点击多少个岗位。所有城市和关键词组合共享这个总上限，达到后会自动停止，降低连续点击过多带来的风控风险。
+              </div>
+            </div>
+            <div class="input-row">
+              <label for="keywordDescriptionInput">关键词生成描述</label>
+              <textarea
+                id="keywordDescriptionInput"
+                class="compact-textarea"
+                placeholder="例如：希望搜索远程优先、偏 AI Agent 落地、全栈开发、产品化研发相关岗位"
+              ></textarea>
+              <div class="toolbar">
+                <button
+                  id="generateKeywordsBtn"
+                  class="btn-secondary"
+                  type="button"
+                >
+                  AI生成关键词
+                </button>
+              </div>
+              <div class="helper">
+                输入岗位方向、技术栈、经验侧重点或业务偏好后，AI 会生成一组更适合 Boss 搜索框的关键词，并合并到上面的关键词输入框中。生成后记得点“保存配置”。
+              </div>
+            </div>
+            <div id="settingsHint" class="helper">
+              至少填写 1 个城市 ID 和 1 个搜索关键词后，才能开启自动执行；切换组合时插件会先改 URL，待页面加载完成后再强制点击一次搜索。
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <details class="card card--collapsible">
+        <summary class="section-toggle">
+          <div class="section-toggle__copy">
+            <h2>简历工作台</h2>
+            <p>支持上传 `.docx`、`.txt`、`.md`，并可用 AI 整理成匹配档案。</p>
+          </div>
+          <span class="section-toggle__meta">
+            <span class="section-toggle__arrow" aria-hidden="true"></span>
+          </span>
+        </summary>
+        <div class="card__body">
+          <input
+            id="resumeFileInput"
+            type="file"
+            accept=".docx,.txt,.md,.markdown,text/plain"
+            hidden
+          />
+          <div class="resume-actions">
+            <button id="uploadResumeBtn" class="btn-secondary" type="button">上传简历</button>
+            <button id="organizeResumeBtn" class="btn-primary" type="button">AI整理</button>
+            <button id="saveResumeBtn" class="btn-ghost" type="button">保存文本</button>
+            <button id="clearResumeBtn" class="btn-danger" type="button">清空简历</button>
+          </div>
+          <div class="hint-row" style="margin-top: 12px">
+            <span id="resumeFileBadge" class="pill pill--neutral">未选择文件</span>
+            <span id="organizedBadge" class="pill pill--neutral">未整理</span>
+          </div>
+          <div style="margin-top: 14px">
+            <div class="subtle" style="margin-bottom: 8px">简历亮点</div>
+            <ul id="resumeHighlights" class="highlights"></ul>
+            <div id="resumeHighlightsEmpty" class="highlights--empty">
+              还没有 AI 提炼出的亮点。
+            </div>
+          </div>
+          <div class="input-grid" style="margin-top: 14px">
+            <div class="input-row">
+              <label for="rawResumeText">原始简历文本</label>
+              <textarea
+                id="rawResumeText"
+                placeholder="上传后会自动解析到这里，你也可以手动补充或修改。"
+              ></textarea>
+              <div class="textarea-meta">
+                <span id="rawResumeMeta">0 字</span>
+                <span>匹配前会优先使用 AI 整理版，没有时退回原文。</span>
+              </div>
+            </div>
+            <div class="input-row">
+              <label for="preparedResumeText">AI 整理后的候选人档案</label>
+              <textarea
+                id="preparedResumeText"
+                placeholder="点击“AI 整理简历”后生成，也支持你手动微调。"
+              ></textarea>
+              <div class="textarea-meta">
+                <span id="preparedResumeMeta">0 字</span>
+                <span>这部分将直接参与岗位匹配与首轮沟通生成。</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <details class="card card--collapsible">
+        <summary class="section-toggle">
+          <div class="section-toggle__copy">
+            <h2>运行日志</h2>
+            <p>这里会同步展示插件记录的关键动作，方便确认执行是否正常。</p>
+          </div>
+          <span class="section-toggle__meta">
+            <span id="logCountPill" class="pill pill--neutral">0 条</span>
+            <span class="section-toggle__arrow" aria-hidden="true"></span>
+          </span>
+        </summary>
+        <div class="card__body">
+          <pre id="logs">暂无日志。</pre>
+        </div>
+      </details>
+    </div>
+
+    <script src="vendor/mammoth.browser.min.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

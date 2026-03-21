@@ -1,0 +1,60 @@
+<svg width="720" height="1060" viewBox="0 0 720 1060" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg3" x1="30" y1="10" x2="690" y2="1040" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8F4EC"/>
+      <stop offset="1" stop-color="#FBE8D8"/>
+    </linearGradient>
+    <linearGradient id="btn3" x1="0" y1="0" x2="150" y2="70" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFA565"/>
+      <stop offset="1" stop-color="#FF8645"/>
+    </linearGradient>
+  </defs>
+  <rect width="720" height="1060" rx="32" fill="url(#bg3)"/>
+  <rect x="8" y="8" width="704" height="1044" rx="34" fill="#FFFDF9" stroke="#EBDCCF" stroke-width="2"/>
+
+  <text x="34" y="72" fill="#202838" font-size="34" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">简历工作台</text>
+  <text x="34" y="112" fill="#667188" font-size="20" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">支持上传、AI 整理、手动修订与亮点摘要展示。</text>
+  <rect x="640" y="30" width="54" height="54" rx="18" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="2"/>
+  <path d="M654 66L667 53L680 66" stroke="#202838" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="8" y1="164" x2="712" y2="164" stroke="#ECE2D8" stroke-width="2"/>
+
+  <rect x="34" y="184" width="120" height="66" rx="24" fill="#F5FBF7" stroke="#B8D6CE" stroke-width="2"/>
+  <text x="64" y="225" fill="#1F7F7D" font-size="20" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">上传简历</text>
+  <rect x="168" y="184" width="152" height="66" rx="24" fill="url(#btn3)"/>
+  <text x="210" y="225" fill="white" font-size="20" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">AI整理</text>
+  <rect x="334" y="184" width="148" height="66" rx="24" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="2"/>
+  <text x="378" y="225" fill="#7A8499" font-size="20" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">保存文本</text>
+  <rect x="496" y="184" width="184" height="66" rx="24" fill="#FFF8F5" stroke="#F2C6BA" stroke-width="2"/>
+  <text x="544" y="225" fill="#D55B49" font-size="20" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">清空简历</text>
+
+  <rect x="34" y="278" width="268" height="42" rx="21" fill="#FFF1EA" stroke="#F0C3B7" stroke-width="2"/>
+  <circle cx="60" cy="299" r="8" fill="#E5703E"/>
+  <text x="78" y="306" fill="#D95E28" font-size="18" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">示例简历-全栈工程师.docx</text>
+  <rect x="34" y="338" width="240" height="42" rx="21" fill="#EAF5ED" stroke="#B8D6CE" stroke-width="2"/>
+  <circle cx="60" cy="359" r="8" fill="#2C8C8A"/>
+  <text x="78" y="366" fill="#1F7F7D" font-size="18" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">已整理 · 2026/03/21 10:24</text>
+
+  <text x="34" y="438" fill="#667188" font-size="20" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">简历亮点</text>
+
+  <rect x="34" y="472" width="492" height="58" rx="28" fill="#FFF6EF" stroke="#F4CDB8" stroke-width="2"/>
+  <text x="56" y="508" fill="#D95E28" font-size="18" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">8年全栈研发经验，具备前后端协同交付能力</text>
+
+  <rect x="34" y="542" width="556" height="58" rx="28" fill="#FFF6EF" stroke="#F4CDB8" stroke-width="2"/>
+  <text x="56" y="578" fill="#D95E28" font-size="18" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">具备 AI 工具链落地与业务流程自动化经验</text>
+
+  <rect x="34" y="612" width="520" height="58" rx="28" fill="#FFF6EF" stroke="#F4CDB8" stroke-width="2"/>
+  <text x="56" y="648" fill="#D95E28" font-size="18" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">熟悉 Web 应用、数据接口与中后台系统开发</text>
+
+  <rect x="34" y="682" width="474" height="58" rx="28" fill="#FFF6EF" stroke="#F4CDB8" stroke-width="2"/>
+  <text x="56" y="718" fill="#D95E28" font-size="18" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">可独立推进从需求拆解到上线交付的完整流程</text>
+
+  <rect x="34" y="752" width="448" height="58" rx="28" fill="#FFF6EF" stroke="#F4CDB8" stroke-width="2"/>
+  <text x="56" y="788" fill="#D95E28" font-size="18" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">支持远程协作，适合产品化与工程化并重岗位</text>
+
+  <rect x="34" y="822" width="410" height="58" rx="28" fill="#FFF6EF" stroke="#F4CDB8" stroke-width="2"/>
+  <text x="56" y="858" fill="#D95E28" font-size="18" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">具备技术方案沟通与跨角色协作经验</text>
+
+  <text x="34" y="936" fill="#667188" font-size="20" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">说明</text>
+  <text x="34" y="972" fill="#667188" font-size="18" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">为避免暴露真实姓名、文件名和履历细节，本图使用了通用示例内容。</text>
+  <text x="34" y="1012" fill="#9A8D80" font-size="16" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">简历工作台示意图 · 已做脱敏处理</text>
+</svg>

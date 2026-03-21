@@ -1,0 +1,10 @@
+{
+  "name": "boss-ai-agent",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Browser extension for resume upload, AI matching, and Boss直聘 outreach automation.",
+  "scripts": {
+    "build": "node scripts/build-extension.mjs",
+    "package": "node scripts/build-extension.mjs --zip"
+  }
+}

@@ -1,0 +1,71 @@
+<svg width="720" height="1040" viewBox="0 0 720 1040" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg1" x1="40" y1="20" x2="680" y2="1020" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8F3EA"/>
+      <stop offset="1" stop-color="#FBE7D6"/>
+    </linearGradient>
+    <linearGradient id="hero1" x1="40" y1="40" x2="680" y2="300" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF8EF"/>
+      <stop offset="1" stop-color="#FFF1E7"/>
+    </linearGradient>
+    <filter id="shadow1" x="0" y="0" width="720" height="1040" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#CDAA7A" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <rect width="720" height="1040" rx="32" fill="url(#bg1)"/>
+  <g filter="url(#shadow1)">
+    <rect x="24" y="24" width="672" height="308" rx="34" fill="url(#hero1)" stroke="#EFD9C6" stroke-width="2"/>
+    <rect x="52" y="52" width="210" height="44" rx="22" fill="#E5F0E6"/>
+    <text x="68" y="81" fill="#1C7A79" font-size="20" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">BOSS AI AGENT</text>
+    <rect x="492" y="52" width="184" height="74" rx="34" fill="#FFB08A"/>
+    <text x="534" y="97" fill="white" font-size="26" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">开始执行</text>
+    <text x="52" y="165" fill="#202838" font-size="34" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">求职自动化控制台</text>
+    <text x="52" y="204" fill="#67738D" font-size="18" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">简历、插件配置和自动沟通都集中在插件里管理。</text>
+    <rect x="52" y="238" width="128" height="44" rx="22" fill="#FFF0EB" stroke="#F0C3B7" stroke-width="2"/>
+    <circle cx="76" cy="260" r="8" fill="#D55B49"/>
+    <text x="94" y="267" fill="#D55B49" font-size="18" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">已停止</text>
+    <rect x="190" y="238" width="232" height="44" rx="22" fill="#F8F6F1" stroke="#D8D8D8" stroke-width="2"/>
+    <circle cx="214" cy="260" r="8" fill="#7C8498"/>
+    <text x="232" y="267" fill="#667188" font-size="18" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">未连接 Boss 页面</text>
+    <rect x="52" y="292" width="262" height="44" rx="22" fill="#EAF5ED" stroke="#B8D6CE" stroke-width="2"/>
+    <circle cx="76" cy="314" r="8" fill="#2C8C8A"/>
+    <text x="94" y="321" fill="#1D7F7D" font-size="18" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">简历已整理并可匹配</text>
+  </g>
+
+  <g>
+    <rect x="24" y="356" width="672" height="130" rx="34" fill="#FFFDF9" stroke="#E6E0D8" stroke-width="2"/>
+    <text x="48" y="412" fill="#202838" font-size="28" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">运行概览</text>
+    <text x="48" y="454" fill="#667188" font-size="18" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">右上角按钮负责启动或停止，下面保留常用辅助操作。</text>
+    <rect x="618" y="382" width="56" height="56" rx="18" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="2"/>
+    <path d="M634 404L646 416L658 404" stroke="#202838" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g>
+    <rect x="24" y="510" width="672" height="130" rx="34" fill="#FFFDF9" stroke="#E6E0D8" stroke-width="2"/>
+    <text x="48" y="566" fill="#202838" font-size="28" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">插件配置</text>
+    <text x="48" y="608" fill="#667188" font-size="18" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">配置 API Key、城市 ID、关键词、总点击上限和 AI 关键词生成描述。</text>
+    <rect x="618" y="536" width="56" height="56" rx="18" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="2"/>
+    <path d="M634 558L646 570L658 558" stroke="#202838" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g>
+    <rect x="24" y="664" width="672" height="130" rx="34" fill="#FFFDF9" stroke="#E6E0D8" stroke-width="2"/>
+    <text x="48" y="720" fill="#202838" font-size="28" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">简历工作台</text>
+    <text x="48" y="762" fill="#667188" font-size="18" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">上传简历、AI 整理、手动微调和查看脱敏后的亮点摘要。</text>
+    <rect x="618" y="690" width="56" height="56" rx="18" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="2"/>
+    <path d="M634 712L646 724L658 712" stroke="#202838" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g>
+    <rect x="24" y="818" width="672" height="138" rx="34" fill="#FFFDF9" stroke="#E6E0D8" stroke-width="2"/>
+    <text x="48" y="874" fill="#202838" font-size="28" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">运行日志</text>
+    <text x="48" y="916" fill="#667188" font-size="18" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">同步展示关键动作，便于确认执行状态与异常处理是否正常。</text>
+    <rect x="470" y="844" width="138" height="44" rx="22" fill="#FFF0E8" stroke="#F4C2AD" stroke-width="2"/>
+    <circle cx="496" cy="866" r="8" fill="#E5703E"/>
+    <text x="514" y="873" fill="#D95E28" font-size="18" font-weight="700" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">240 条</text>
+    <rect x="618" y="844" width="56" height="56" rx="18" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="2"/>
+    <path d="M634 866L646 878L658 866" stroke="#202838" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <text x="48" y="1006" fill="#9A8D80" font-size="16" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">界面预览示意图 · 已做脱敏处理</text>
+</svg>
