@@ -78,6 +78,43 @@ function trimText(value) {
   return String(value || "").trim();
 }
 
+function ensureRemoteOnlyMessage(message) {
+  const base = trimText(message);
+  if (!base) {
+    return "";
+  }
+
+  const paragraphs = base
+    .split(/\n{2,}/)
+    .map((item) => trimText(item))
+    .filter(Boolean);
+  const joined = paragraphs.join("\n\n");
+  const remoteMatches = joined.match(/远程|remote|居家办公|远程协作/gi) || [];
+  const hasExplicitRemoteOnly = /仅考虑远程|只考虑远程|仅接受远程|只接受远程|只看远程/.test(
+    joined
+  );
+  const hasRemoteCondition = /支持长期远程|支持远程协作|远程办公岗位|远程岗位/.test(
+    joined
+  );
+  const remoteNotes = [];
+
+  if (!hasExplicitRemoteOnly) {
+    remoteNotes.push(
+      "目前我这边仅考虑远程办公岗位，如果贵司该岗位支持长期远程协作，我很愿意继续沟通。"
+    );
+  }
+  if (remoteMatches.length < 2 || !hasRemoteCondition) {
+    remoteNotes.push(
+      "远程办公是我当前求职的明确前提，若该岗位需要线下坐班或现场办公，这边就先不继续推进了。"
+    );
+  }
+  if (remoteNotes.length) {
+    paragraphs[paragraphs.length - 1] += remoteNotes.join("");
+  }
+
+  return paragraphs.join("\n\n");
+}
+
 function splitConfigList(value) {
   if (Array.isArray(value)) {
     return value.flatMap((item) => splitConfigList(item));
@@ -413,7 +450,8 @@ async function matchJobWithAI(job, settings) {
       "你是一个资深技术招聘专家兼求职助手，负责根据候选人信息与职位信息评估匹配度，并生成用于 Boss 直聘首轮沟通的消息。" +
       "【匹配优先级】① 岗位薪资上限是硬性条件，低于 18K 必须视为不匹配；② 岗位方向是否符合候选人的全栈、AI Agent、产品研发等方向；③ 其他因素权重更低。" +
       "【不要误伤】地域/工作城市不纳入评分；不要因技术栈表述不完全一致就明显降分；不要因岗位经验年限写法与候选人不同就大幅扣分。" +
-      "【名称要求】职位名称必须严格沿用原始职位名称，不允许改写。",
+      "【名称要求】职位名称必须严格沿用原始职位名称，不允许改写。" +
+      "【沟通要求】生成 sendMessage 时，必须把“候选人目前仅考虑远程办公岗位”作为明确前提，至少用两句不同表述重复强调，不能弱化成偏好或意向。",
     userPrompt: `
 ${resumeContext.promptText}
 
@@ -424,21 +462,23 @@ ${jobText}
 {
   "score": 95.3,
   "reason": "用中文简要说明匹配或不匹配的关键原因，50~150 字。",
-  "sendMessage": "用于和 Boss 打招呼的一段中文消息，1~3 段话。请严格使用职位信息中的原始职位名称，不要以“您好”开头，因为插件会自动补开场问候。"
+  "sendMessage": "用于和 Boss 打招呼的一段中文消息，1~3 段话。请严格使用职位信息中的原始职位名称，不要以“您好”开头，因为插件会自动补开场问候。消息中必须至少 2 次明确强调候选人仅考虑远程办公岗位/远程协作。"
 }
 
 要求：
 1. score 为 0~100 的小数，保留 1 位小数。
-2. sendMessage 先写与岗位和候选人技术背景相关的内容，再自然说明目前只考虑远程办公岗位。
-3. 不要写 emoji，不要写“简历见附件”等空话。
-4. 如果岗位薪资上限低于 18K，应明显降低分数并在 reason 中写明。
+2. sendMessage 先写与岗位和候选人技术背景相关的内容，再明确说明目前仅考虑远程办公岗位。
+3. sendMessage 中必须至少用 2 句不同说法重复强调“仅考虑远程办公岗位/远程协作”，让对方一眼看清这是前提条件。
+4. 不要把远程写成“优先”“最好”“倾向”，必须表达为当前的明确限制条件；如果岗位需要线下坐班、到场办公或不支持远程，就直接说清楚暂不考虑。
+5. 不要写 emoji，不要写“简历见附件”等空话。
+6. 如果岗位薪资上限低于 18K，应明显降低分数并在 reason 中写明。
 `,
   });
 
   return {
     score: normalizeScore(parsed.score),
     reason: trimText(parsed.reason),
-    sendMessage: trimText(parsed.sendMessage),
+    sendMessage: ensureRemoteOnlyMessage(parsed.sendMessage),
     resumeMode: resumeContext.preparedResumeText ? "prepared" : "raw",
   };
 }

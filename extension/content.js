@@ -126,6 +126,7 @@ function normalizeConfiguredMaxJobClicks(value) {
 }
 
 const TOTAL_CLICK_COUNT_STORAGE_KEY = "bossAi:runTotalClickCount";
+const SEARCH_RESUME_SIGNAL_STORAGE_KEY = "bossAi:resumeAfterSearch";
 
 function getSavedTotalClickCount() {
   try {
@@ -206,6 +207,101 @@ function saveRotationIndices(queryIndex, cityIndex) {
   } catch (_) {}
 }
 
+function setAutoRestartFlag(reason = "") {
+  try {
+    localStorage.setItem("bossAi:autoRestart", "1");
+    if (reason) {
+      logFromContent(`[autoRestart] 已写入页面重启标记：${reason}`);
+    }
+  } catch (_) {}
+}
+
+function clearAutoRestartFlag() {
+  try {
+    localStorage.removeItem("bossAi:autoRestart");
+  } catch (_) {}
+}
+
+function setSearchResumeSignal(target) {
+  try {
+    localStorage.setItem(
+      SEARCH_RESUME_SIGNAL_STORAGE_KEY,
+      JSON.stringify({
+        cityId: trimAutomationValue(target?.cityId),
+        query: normalizeSearchQueryText(target?.query),
+        ts: Date.now(),
+      })
+    );
+  } catch (_) {}
+}
+
+function readSearchResumeSignal() {
+  try {
+    const raw = localStorage.getItem(SEARCH_RESUME_SIGNAL_STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw);
+    return {
+      cityId: trimAutomationValue(parsed?.cityId),
+      query: normalizeSearchQueryText(parsed?.query),
+      ts: Number(parsed?.ts) || 0,
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+function clearSearchResumeSignal() {
+  try {
+    localStorage.removeItem(SEARCH_RESUME_SIGNAL_STORAGE_KEY);
+  } catch (_) {}
+}
+
+function shouldResumeCrawlingAfterSearch(target) {
+  const signal = readSearchResumeSignal();
+  if (!signal) {
+    return false;
+  }
+
+  const signalMatches =
+    signal.cityId === trimAutomationValue(target?.cityId) &&
+    signal.query === normalizeSearchQueryText(target?.query);
+  const isFresh = Date.now() - signal.ts <= 15000;
+
+  return signalMatches && isFresh && isCurrentJobListMatchingTarget(target);
+}
+
+function scheduleResumeCrawlingAfterSearch(target) {
+  const state = ensureAutoBrowseState();
+  clearAutoBrowsePrepareTimer();
+  state.phase = "resume_after_search";
+
+  state.prepareTimer = setTimeout(() => {
+    state.prepareTimer = null;
+    if (!state.started || !isJobListPage()) {
+      return;
+    }
+
+    if (!isCurrentJobListMatchingTarget(target)) {
+      logFromContent(
+        `[resumeAfterSearch] 页面恢复后参数已变化，重新回到配置目标。currentUrl=${location.href}`
+      );
+      clearSearchResumeSignal();
+      navigateToAutomationTarget(target, "搜索刷新恢复后重新应用配置");
+      return;
+    }
+
+    clearSearchResumeSignal();
+    clearAutoRestartFlag();
+    logFromContent(
+      `自动浏览：检测到搜索刷新后的恢复标记，直接开始爬取 cityId=${target.cityId}，关键词=${target.query}。`
+    );
+    startCrawlingCurrentCityFromList();
+  }, 1600);
+}
+
 function getCurrentAutomationTarget(settings) {
   const cityIds = settings.cityIds || [];
   const searchKeywords = settings.searchKeywords || [];
@@ -252,13 +348,14 @@ function getNextAutomationTarget(settings, currentTarget) {
 }
 
 function buildJobListUrlForConfig(cityId, query) {
-  return (
-    "https://www.zhipin.com/web/geek/jobs?city=" +
-    encodeURIComponent(trimAutomationValue(cityId)) +
-    "&query=" +
-    encodeURIComponent(normalizeSearchQueryText(query)) +
-    "&industry=&position="
-  );
+  const targetUrl = new URL("https://www.zhipin.com/web/geek/jobs");
+  const normalizedCityId = trimAutomationValue(cityId);
+  const normalizedQuery = normalizeSearchQueryText(query);
+  targetUrl.searchParams.set("city", normalizedCityId);
+  targetUrl.searchParams.set("query", normalizedQuery);
+  targetUrl.searchParams.set("industry", "");
+  targetUrl.searchParams.set("position", normalizedQuery);
+  return targetUrl.toString();
 }
 
 function parseJobListParams(url = location.href) {
@@ -266,7 +363,11 @@ function parseJobListParams(url = location.href) {
     const parsed = new URL(url);
     return {
       cityId: trimAutomationValue(parsed.searchParams.get("city") || ""),
-      query: normalizeSearchQueryText(parsed.searchParams.get("query") || ""),
+      query: normalizeSearchQueryText(
+        parsed.searchParams.get("position") ||
+          parsed.searchParams.get("query") ||
+          ""
+      ),
     };
   } catch (_) {
     return {
@@ -1182,6 +1283,7 @@ function ensureAutoBrowseState() {
       totalClickedCount: getSavedTotalClickCount(),
       scrollCountThisCity: 0,
       scrollsWithNoNewCards: 0,
+      searchRecoveryCount: 0,
     };
   }
   return window.__bossAutoBrowse;
@@ -1206,6 +1308,32 @@ function getScrollContainerForAuto() {
   return window;
 }
 
+function getElementClassNameForLog(element) {
+  if (!element) {
+    return "";
+  }
+
+  const className = element.className;
+  if (typeof className === "string") {
+    return className;
+  }
+  if (className && typeof className.baseVal === "string") {
+    return className.baseVal;
+  }
+  if (className && typeof className.animVal === "string") {
+    return className.animVal;
+  }
+
+  return String(className || "");
+}
+
+function getElementTextForLog(element, maxLength = 40) {
+  return String(element?.innerText || element?.textContent || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+}
+
 function simulateClickAt(el) {
   el.scrollIntoView({ behavior: "instant", block: "center" });
   const rect = el.getBoundingClientRect();
@@ -1213,8 +1341,8 @@ function simulateClickAt(el) {
   const cy = Math.round(rect.top + rect.height / 2);
   const topEl = document.elementFromPoint(cx, cy) || el;
   logFromContent(
-    `[simulateClick] 坐标=(${cx},${cy})，目标=<${el.tagName} "${(el.innerText||el.textContent||"").trim().slice(0,12)}">，` +
-    `顶层元素=<${topEl.tagName} class="${topEl.className.slice(0,30)}" txt="${(topEl.innerText||topEl.textContent||"").trim().slice(0,12)}">`
+    `[simulateClick] 坐标=(${cx},${cy})，目标=<${el.tagName} "${getElementTextForLog(el, 12)}">，` +
+    `顶层元素=<${topEl.tagName} class="${getElementClassNameForLog(topEl).slice(0, 30)}" txt="${getElementTextForLog(topEl, 12)}">`
   );
   const opts = { bubbles: true, cancelable: true, view: window, clientX: cx, clientY: cy };
   topEl.dispatchEvent(new MouseEvent("mousedown", opts));
@@ -1223,11 +1351,104 @@ function simulateClickAt(el) {
   return topEl;
 }
 
-function clickSearchButtonForAuto() {
+function setNativeValueForSearchInput(element, value) {
+  if (!element) {
+    return;
+  }
+
+  const prototype =
+    element instanceof HTMLTextAreaElement
+      ? HTMLTextAreaElement.prototype
+      : HTMLInputElement.prototype;
+  const descriptor = Object.getOwnPropertyDescriptor(prototype, "value");
+
+  if (descriptor?.set) {
+    descriptor.set.call(element, value);
+    return;
+  }
+
+  element.value = value;
+}
+
+function findSearchInputForAuto() {
+  const selectors = [
+    ".job-search-box .job-search-form .search-input-box input",
+    ".job-search-box .job-search-form .input-wrap .input",
+    ".job-search-form .search-input-box input",
+    ".job-search-form .input-wrap .input",
+    ".job-search-form input[type='text']",
+    "input[placeholder*='职位']",
+    "input[placeholder*='岗位']",
+    "input[placeholder*='公司']",
+    "input[placeholder*='搜索']",
+  ];
+
+  for (const selector of selectors) {
+    const element = document.querySelector(selector);
+    if (
+      element instanceof HTMLInputElement ||
+      element instanceof HTMLTextAreaElement
+    ) {
+      return element;
+    }
+  }
+
+  return null;
+}
+
+function syncSearchFormForAuto(target) {
+  const query = normalizeSearchQueryText(target?.query);
+  if (!query) {
+    logFromContent("[searchForm] 未提供有效关键词，跳过同步搜索框。");
+    return false;
+  }
+
+  const input = findSearchInputForAuto();
+  if (!input) {
+    logFromContent(
+      `[searchForm] 未找到职位搜索输入框，当前仍使用 URL 参数 cityId=${target?.cityId || ""}，query=${query}`
+    );
+    return false;
+  }
+
+  const previousValue = normalizeSearchQueryText(
+    input.value || input.getAttribute("value") || ""
+  );
+
+  input.focus();
+  setNativeValueForSearchInput(input, query);
+  input.setAttribute("value", query);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+  input.blur();
+
+  logFromContent(
+    `[searchForm] 已同步搜索框：before="${previousValue}"，after="${query}"`
+  );
+  return true;
+}
+
+function prepareSearchButtonHrefForAuto(searchButton, target) {
+  if (!(searchButton instanceof HTMLAnchorElement)) {
+    return null;
+  }
+
+  const targetUrl = buildJobListUrlForConfig(target?.cityId, target?.query);
+  const previousHref = searchButton.href || searchButton.getAttribute("href") || "";
+  searchButton.setAttribute("href", targetUrl);
+  searchButton.href = targetUrl;
+  logFromContent(
+    `[searchBtn] 已覆盖搜索按钮 href：before="${previousHref}"，after="${searchButton.href}"`
+  );
+  return targetUrl;
+}
+
+function clickSearchButtonForAuto(target) {
   logFromContent("[searchBtn] ▶ clickSearchButtonForAuto 被调用，当前 URL=" + location.href);
+  syncSearchFormForAuto(target);
 
   const cityDialog = document.querySelector(".city-list-hot, .dialog-city, [class*='city'][class*='dialog'], [class*='city'][class*='modal']");
-  logFromContent(`[searchBtn] 搜索区域检测：城市弹层=${cityDialog ? cityDialog.className : "未检测到"}`);
+  logFromContent(`[searchBtn] 搜索区域检测：城市弹层=${cityDialog ? getElementClassNameForLog(cityDialog) : "未检测到"}`);
 
   // 收集所有文字精确等于"搜索"的叶子元素（排除含大量子内容的容器）
   const allEls = Array.from(document.querySelectorAll("button, a, span, input[type=submit], input[type=button]"));
@@ -1242,15 +1463,20 @@ function clickSearchButtonForAuto() {
 
   logFromContent(
     `[searchBtn] 精确匹配"搜索"=${exactMatch.length}个，宽松匹配=${looseMatch.length}个：` +
-    looseMatch.map(e => `<${e.tagName} class="${e.className.slice(0,20)}" txt="${(e.innerText||e.textContent||"").trim()}">`).join(" | ")
+    looseMatch
+      .map(
+        (e) =>
+          `<${e.tagName} class="${getElementClassNameForLog(e).slice(0, 20)}" txt="${getElementTextForLog(e, 20)}">`
+      )
+      .join(" | ")
   );
 
-  const target = exactMatch.find(e => e.tagName === "BUTTON")
+  const searchButton = exactMatch.find(e => e.tagName === "BUTTON")
     || exactMatch[0]
     || looseMatch.find(e => e.tagName === "BUTTON")
     || looseMatch[0];
 
-  if (!target) {
+  if (!searchButton) {
     // 最后兜底：打印页面上所有 button 的文字，供人工核对
     const allBtnTxts = Array.from(document.querySelectorAll("button"))
       .map(b => `"${(b.innerText||b.textContent||"").trim().slice(0,15)}"`)
@@ -1259,8 +1485,25 @@ function clickSearchButtonForAuto() {
     return false;
   }
 
-  simulateClickAt(target);
-  logFromContent(`[searchBtn] ✅ 点击完毕，目标=<${target.tagName} class="${target.className}" txt="${(target.innerText||target.textContent||"").trim()}">`);
+  const preparedHref = prepareSearchButtonHrefForAuto(searchButton, target);
+  setSearchResumeSignal(target);
+  setAutoRestartFlag("搜索按钮可能触发列表页刷新");
+  simulateClickAt(searchButton);
+  logFromContent(`[searchBtn] ✅ 点击完毕，目标=<${searchButton.tagName} class="${getElementClassNameForLog(searchButton)}" txt="${getElementTextForLog(searchButton, 20)}">`);
+
+  if (preparedHref) {
+    setTimeout(() => {
+      if (!isJobListPage() || isCurrentJobListMatchingTarget(target)) {
+        return;
+      }
+
+      logFromContent(
+        `[searchBtn] 点击后快速校验仍未命中目标，立即强制跳转。currentUrl=${location.href}，targetUrl=${preparedHref}`
+      );
+      location.href = preparedHref;
+    }, 400);
+  }
+
   return true;
 }
 
@@ -1292,7 +1535,7 @@ function navigateToAutomationTarget(target, reason) {
   );
 
   try {
-    localStorage.setItem("bossAi:autoRestart", "1");
+    setAutoRestartFlag(reason);
   } catch (_) {}
 
   if (isCurrentJobListMatchingTarget(target)) {
@@ -1316,7 +1559,7 @@ function scheduleSearchClickAndCrawl(target, attempt = 1) {
       return;
     }
 
-    const clicked = clickSearchButtonForAuto();
+    const clicked = clickSearchButtonForAuto(target);
     if (!clicked) {
       if (attempt >= 8) {
         logFromContent(
@@ -1339,6 +1582,34 @@ function scheduleSearchClickAndCrawl(target, attempt = 1) {
       if (!state.started || !isJobListPage()) {
         return;
       }
+
+      if (!isCurrentJobListMatchingTarget(target)) {
+        state.searchRecoveryCount =
+          (Number(state.searchRecoveryCount) || 0) + 1;
+        const currentParams = parseJobListParams(location.href);
+
+        if (state.searchRecoveryCount > 3) {
+          logFromContent(
+            `[searchBtn] 搜索后页面仍未命中目标 cityId=${target.cityId}，关键词=${target.query}，实际 currentUrl=${location.href}，actualCityId=${currentParams.cityId}，actualQuery=${currentParams.query}，连续修正 ${state.searchRecoveryCount} 次失败，停止执行。`
+          );
+          stopAutoBrowseAndChat("搜索参数未命中配置");
+          return;
+        }
+
+        logFromContent(
+          `[searchBtn] 搜索后页面参数偏离目标，第 ${state.searchRecoveryCount} 次重新拉回 cityId=${target.cityId}，关键词=${target.query}。currentUrl=${location.href}，actualCityId=${currentParams.cityId}，actualQuery=${currentParams.query}`
+        );
+        clearSearchResumeSignal();
+        navigateToAutomationTarget(
+          target,
+          `搜索后页面参数偏离目标，第 ${state.searchRecoveryCount} 次重新应用配置`
+        );
+        return;
+      }
+
+      state.searchRecoveryCount = 0;
+      clearSearchResumeSignal();
+      clearAutoRestartFlag();
 
       logFromContent(
         `自动浏览：搜索已刷新，开始爬取 cityId=${target.cityId}，关键词=${target.query}。`
@@ -1400,6 +1671,7 @@ function startCrawlingCurrentCityFromList() {
   );
   const SCROLL_INTERVAL = 2000;
   const CLICK_INTERVAL = 3000;
+  clearAutoRestartFlag();
 
   logFromContent(
     `自动浏览：本次运行总点击上限=${MAX_TOTAL_JOB_CLICKS}，所有城市和关键词组合共享，达到后自动停止。`
@@ -1908,13 +2180,23 @@ async function startAutoBrowseFromTop(settingsOverride = null) {
   state.phase = "prepare_target";
   state._noTimerSince = null;
   state.__emptyJobsChecks = 0;
+  state.searchRecoveryCount = 0;
 
   logFromContent(
     `自动浏览：加载配置完成，当前目标 cityId=${target.cityId}，关键词=${target.query}。`
   );
 
   if (!isCurrentJobListMatchingTarget(target)) {
+    clearSearchResumeSignal();
     navigateToAutomationTarget(target, "应用新的城市与关键词配置");
+    return;
+  }
+
+  if (shouldResumeCrawlingAfterSearch(target)) {
+    logFromContent(
+      "自动浏览：当前页面命中搜索刷新恢复条件，本轮跳过再次点击搜索。"
+    );
+    scheduleResumeCrawlingAfterSearch(target);
     return;
   }
 
@@ -2018,6 +2300,7 @@ function stopAutoBrowseAndChat(reason = "manual") {
   state.__emptyJobsChecks = 0;
   state.scrollCountThisCity = 0;
   state.scrollsWithNoNewCards = 0;
+  state.searchRecoveryCount = 0;
 
   stopChatPollingTimers();
   window.__bossChatSending = false;
@@ -2028,6 +2311,7 @@ function stopAutoBrowseAndChat(reason = "manual") {
     localStorage.setItem("bossAi:autoRunning", "0");
     localStorage.removeItem("bossAi:autoRestart");
   } catch (_) {}
+  clearSearchResumeSignal();
 
   logFromContent(`自动浏览：已停止（${reason}）。`);
   return getPageStateSnapshot();
@@ -2047,6 +2331,7 @@ function clearPageStorageRecords() {
     localStorage.removeItem("bossAi:autoRestart");
     localStorage.removeItem("bossAi:debugLog");
   } catch (_) {}
+  clearSearchResumeSignal();
 
   logFromContent(`自动浏览：已清空页面岗位缓存 ${removedCount} 条。`);
   return removedCount;
@@ -2174,7 +2459,7 @@ if (isJobListPage()) {
     // 稍等页面稳定后再启动
     setTimeout(() => {
       logFromContent(
-        "自动浏览：检测到聊天页返回标记，开始按配置重新执行。"
+        "自动浏览：检测到页面重启标记，开始按配置重新执行。"
       );
       try {
         const s = ensureAutoBrowseState();
@@ -2188,7 +2473,7 @@ if (isJobListPage()) {
         s.started = false;
       } catch (_) {}
       startAutoBrowseFromTop().catch((error) => {
-        logFromContent(`自动浏览：聊天页返回后重启失败：${error.message}`);
+        logFromContent(`自动浏览：页面重启后恢复失败：${error.message}`);
       });
     }, 2000);
   }
@@ -2243,7 +2528,7 @@ if (isJobListPage()) {
       state.started = false;
 
       logFromContent(
-        "自动浏览：守护进程检测到聊天页返回标记，强制重启自动浏览。"
+        "自动浏览：守护进程检测到页面重启标记，强制重启自动浏览。"
       );
       startAutoBrowseFromTop().catch((error) => {
         logFromContent(`自动浏览：守护进程重启失败：${error.message}`);
@@ -2259,7 +2544,7 @@ if (isJobListPage()) {
       if (!state._noTimerSince) {
         state._noTimerSince = now;
         logFromContent(
-          "自动浏览：检测到 started 运行但暂无定时器，等待确认是否为崩溃..."
+          "自动浏览：检测到运行意图开启但当前暂无定时器，等待确认是否为崩溃..."
         );
       } else if (now - state._noTimerSince > 25000) {
         state._noTimerSince = null;

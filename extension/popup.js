@@ -230,13 +230,14 @@ function delay(ms) {
 }
 
 function buildJobListUrl(cityId, query) {
-  return (
-    "https://www.zhipin.com/web/geek/jobs?city=" +
-    encodeURIComponent(normalizeText(cityId)) +
-    "&query=" +
-    encodeURIComponent(normalizeText(query)) +
-    "&industry=&position="
-  );
+  const targetUrl = new URL("https://www.zhipin.com/web/geek/jobs");
+  const normalizedCityId = normalizeText(cityId);
+  const normalizedQuery = normalizeText(query);
+  targetUrl.searchParams.set("city", normalizedCityId);
+  targetUrl.searchParams.set("query", normalizedQuery);
+  targetUrl.searchParams.set("industry", "");
+  targetUrl.searchParams.set("position", normalizedQuery);
+  return targetUrl.toString();
 }
 
 function getConfiguredJobListTarget(settings = state.dashboard?.settings || {}) {
@@ -257,10 +258,15 @@ function getConfiguredJobListTarget(settings = state.dashboard?.settings || {}) 
 function isJobListUrlMatching(url, cityId, query) {
   try {
     const parsed = new URL(url);
+    const normalizedQuery = normalizeText(
+      parsed.searchParams.get("position") ||
+        parsed.searchParams.get("query") ||
+        ""
+    );
     return (
       parsed.pathname.includes("/web/geek/jobs") &&
       normalizeText(parsed.searchParams.get("city")) === normalizeText(cityId) &&
-      normalizeText(parsed.searchParams.get("query")) === normalizeText(query)
+      normalizedQuery === normalizeText(query)
     );
   } catch (_) {
     return false;
