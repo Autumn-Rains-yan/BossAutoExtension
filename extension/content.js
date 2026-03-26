@@ -207,6 +207,13 @@ function saveRotationIndices(queryIndex, cityIndex) {
   } catch (_) {}
 }
 
+function clearSavedRotationIndices() {
+  try {
+    window.localStorage.removeItem("bossAi:lastQueryIndex");
+    window.localStorage.removeItem("bossAi:lastCityIndex");
+  } catch (_) {}
+}
+
 function setAutoRestartFlag(reason = "") {
   try {
     localStorage.setItem("bossAi:autoRestart", "1");
@@ -2311,6 +2318,7 @@ function stopAutoBrowseAndChat(reason = "manual") {
     localStorage.setItem("bossAi:autoRunning", "0");
     localStorage.removeItem("bossAi:autoRestart");
   } catch (_) {}
+  clearSavedRotationIndices();
   clearSearchResumeSignal();
 
   logFromContent(`自动浏览：已停止（${reason}）。`);
@@ -2365,9 +2373,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       } catch (_) {}
 
       if (!wasRunningWanted) {
+        clearSavedRotationIndices();
         setSavedTotalClickCount(0);
         const state = ensureAutoBrowseState();
         state.totalClickedCount = 0;
+        logFromContent("自动浏览：开始新一轮执行，已重置城市与关键词轮换位置。");
       }
 
       if (isJobListPage()) {
