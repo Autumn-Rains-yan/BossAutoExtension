@@ -127,6 +127,7 @@ function normalizeConfiguredMaxJobClicks(value) {
 
 const TOTAL_CLICK_COUNT_STORAGE_KEY = "bossAi:runTotalClickCount";
 const SEARCH_RESUME_SIGNAL_STORAGE_KEY = "bossAi:resumeAfterSearch";
+const PENDING_TARGET_SWITCH_STORAGE_KEY = "bossAi:pendingTargetSwitch";
 
 function getSavedTotalClickCount() {
   try {
@@ -266,6 +267,58 @@ function clearSearchResumeSignal() {
   } catch (_) {}
 }
 
+function setPendingAutomationTarget(target) {
+  try {
+    localStorage.setItem(
+      PENDING_TARGET_SWITCH_STORAGE_KEY,
+      JSON.stringify({
+        cityId: trimAutomationValue(target?.cityId),
+        query: normalizeSearchQueryText(target?.query),
+        cityIndex: Math.max(0, Number(target?.cityIndex) || 0),
+        queryIndex: Math.max(0, Number(target?.queryIndex) || 0),
+        ts: Date.now(),
+      })
+    );
+  } catch (_) {}
+}
+
+function readPendingAutomationTarget() {
+  try {
+    const raw = localStorage.getItem(PENDING_TARGET_SWITCH_STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw);
+    const target = {
+      cityId: trimAutomationValue(parsed?.cityId),
+      query: normalizeSearchQueryText(parsed?.query),
+      cityIndex: Math.max(0, Number(parsed?.cityIndex) || 0),
+      queryIndex: Math.max(0, Number(parsed?.queryIndex) || 0),
+      ts: Number(parsed?.ts) || 0,
+    };
+
+    if (!target.cityId || !target.query) {
+      return null;
+    }
+
+    if (Date.now() - target.ts > 120000) {
+      clearPendingAutomationTarget();
+      return null;
+    }
+
+    return target;
+  } catch (_) {
+    return null;
+  }
+}
+
+function clearPendingAutomationTarget() {
+  try {
+    localStorage.removeItem(PENDING_TARGET_SWITCH_STORAGE_KEY);
+  } catch (_) {}
+}
+
 function shouldResumeCrawlingAfterSearch(target) {
   const signal = readSearchResumeSignal();
   if (!signal) {
@@ -278,6 +331,27 @@ function shouldResumeCrawlingAfterSearch(target) {
   const isFresh = Date.now() - signal.ts <= 15000;
 
   return signalMatches && isFresh && isCurrentJobListMatchingTarget(target);
+}
+
+function getPreferredAutomationTarget(settings) {
+  const cityIds = settings.cityIds || [];
+  const searchKeywords = settings.searchKeywords || [];
+  const pendingTarget = readPendingAutomationTarget();
+
+  if (
+    pendingTarget &&
+    cityIds[pendingTarget.cityIndex] === pendingTarget.cityId &&
+    searchKeywords[pendingTarget.queryIndex] === pendingTarget.query
+  ) {
+    return {
+      cityIndex: pendingTarget.cityIndex,
+      queryIndex: pendingTarget.queryIndex,
+      cityId: pendingTarget.cityId,
+      query: pendingTarget.query,
+    };
+  }
+
+  return getCurrentAutomationTarget(settings);
 }
 
 function scheduleResumeCrawlingAfterSearch(target) {
@@ -302,6 +376,7 @@ function scheduleResumeCrawlingAfterSearch(target) {
 
     clearSearchResumeSignal();
     clearAutoRestartFlag();
+    clearPendingAutomationTarget();
     logFromContent(
       `自动浏览：检测到搜索刷新后的恢复标记，直接开始爬取 cityId=${target.cityId}，关键词=${target.query}。`
     );
@@ -418,7 +493,7 @@ function redirectBackToConfiguredJobList(delayMs = 1800) {
           return;
         }
 
-        const target = getCurrentAutomationTarget(settings);
+        const target = getPreferredAutomationTarget(settings);
         location.href = buildJobListUrlForConfig(target.cityId, target.query);
       })
       .catch((error) => {
@@ -501,7 +576,7 @@ try {
           return;
         }
 
-        const target = getCurrentAutomationTarget(settings);
+        const target = getPreferredAutomationTarget(settings);
         const targetUrl = buildJobListUrlForConfig(target.cityId, target.query);
         chrome.runtime?.sendMessage?.({
           type: "LOG",
@@ -1527,6 +1602,7 @@ function navigateToAutomationTarget(target, reason) {
   const targetUrl = buildJobListUrlForConfig(target.cityId, target.query);
 
   saveRotationIndices(target.queryIndex, target.cityIndex);
+  setPendingAutomationTarget(target);
   syncAutoBrowseConfig(
     state,
     {
@@ -1617,6 +1693,7 @@ function scheduleSearchClickAndCrawl(target, attempt = 1) {
       state.searchRecoveryCount = 0;
       clearSearchResumeSignal();
       clearAutoRestartFlag();
+      clearPendingAutomationTarget();
 
       logFromContent(
         `自动浏览：搜索已刷新，开始爬取 cityId=${target.cityId}，关键词=${target.query}。`
@@ -1679,6 +1756,7 @@ function startCrawlingCurrentCityFromList() {
   const SCROLL_INTERVAL = 2000;
   const CLICK_INTERVAL = 3000;
   clearAutoRestartFlag();
+  clearPendingAutomationTarget();
 
   logFromContent(
     `自动浏览：本次运行总点击上限=${MAX_TOTAL_JOB_CLICKS}，所有城市和关键词组合共享，达到后自动停止。`
@@ -2094,6 +2172,7 @@ function startCrawlingCurrentCityFromList() {
                           nextTarget.queryIndex,
                           nextTarget.cityIndex
                         );
+                        setPendingAutomationTarget(nextTarget);
                         // 点击「立即沟通」前停止所有自动化定时器，防止在聊天页（SPA跳转或内联弹窗）继续
                         // 运行 scrollTimer/clickTimer，误触聊天页内的岗位历史链接打开新窗口
                         if (s.scrollTimer) { clearInterval(s.scrollTimer); s.scrollTimer = null; }
@@ -2176,7 +2255,7 @@ async function startAutoBrowseFromTop(settingsOverride = null) {
     throw new Error("请先在插件中至少配置 1 个城市 ID 和 1 个搜索关键词。");
   }
 
-  const target = getCurrentAutomationTarget(settings);
+  const target = getPreferredAutomationTarget(settings);
   if (!target.cityId || !target.query) {
     stopAutoBrowseAndChat("自动执行配置无效");
     throw new Error("自动执行配置无效，请检查城市 ID 与搜索关键词。");
@@ -2320,6 +2399,7 @@ function stopAutoBrowseAndChat(reason = "manual") {
   } catch (_) {}
   clearSavedRotationIndices();
   clearSearchResumeSignal();
+  clearPendingAutomationTarget();
 
   logFromContent(`自动浏览：已停止（${reason}）。`);
   return getPageStateSnapshot();
@@ -2340,6 +2420,7 @@ function clearPageStorageRecords() {
     localStorage.removeItem("bossAi:debugLog");
   } catch (_) {}
   clearSearchResumeSignal();
+  clearPendingAutomationTarget();
 
   logFromContent(`自动浏览：已清空页面岗位缓存 ${removedCount} 条。`);
   return removedCount;
@@ -2374,6 +2455,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       if (!wasRunningWanted) {
         clearSavedRotationIndices();
+        clearPendingAutomationTarget();
         setSavedTotalClickCount(0);
         const state = ensureAutoBrowseState();
         state.totalClickedCount = 0;
@@ -2407,9 +2489,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return;
       }
 
-      const target = getCurrentAutomationTarget(settings);
+      const target = getPreferredAutomationTarget(settings);
       const targetUrl = buildJobListUrlForConfig(target.cityId, target.query);
       saveRotationIndices(target.queryIndex, target.cityIndex);
+      setPendingAutomationTarget(target);
       try {
         localStorage.setItem("bossAi:autoRestart", "1");
       } catch (_) {}
@@ -2487,6 +2570,33 @@ if (isJobListPage()) {
       });
     }, 2000);
   }
+
+  // 切换城市/关键词时，额外记录一个待恢复目标；即使 autoRestart 标记在页面跳转中丢失，
+  // 也能在新列表页里尽快继续执行，而不是等守护进程超时后再拉起。
+  setTimeout(() => {
+    if (!isJobListPage()) return;
+
+    let isRunningWanted = false;
+    try {
+      isRunningWanted = localStorage.getItem("bossAi:autoRunning") === "1";
+    } catch (_) {}
+    if (!isRunningWanted) return;
+
+    const pendingTarget = readPendingAutomationTarget();
+    if (!pendingTarget) return;
+
+    const state = ensureAutoBrowseState();
+    if (state.started || state.prepareTimer || state.scrollTimer || state.clickTimer) {
+      return;
+    }
+
+    logFromContent(
+      `自动浏览：检测到待恢复的目标组合，立即继续执行 cityId=${pendingTarget.cityId}，关键词=${pendingTarget.query}。`
+    );
+    startAutoBrowseFromTop().catch((error) => {
+      logFromContent(`自动浏览：待恢复目标启动失败：${error.message}`);
+    });
+  }, 3200);
 
   // 守护进程：周期性检查并恢复脚本运行状态（通过 localStorage 持久化运行意图）
   setInterval(() => {
