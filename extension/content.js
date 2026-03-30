@@ -11,18 +11,20 @@
     if (panel && document.body && document.body.contains(panel)) return panel;
     panel = document.createElement("div");
     panel.id = "__bossAiLog__";
+    // pointer-events:none：避免盖住 Boss 聊天区右下角「发送」等按钮，导致自动化 click 点到面板上而发送失败
     panel.style.cssText = [
       "position:fixed", "bottom:10px", "right:10px", "z-index:2147483647",
       "width:420px", "max-height:280px", "overflow-y:auto",
       "background:rgba(0,0,0,0.82)", "color:#0f0", "font:11px/1.4 monospace",
-      "padding:6px 8px", "border-radius:6px", "pointer-events:auto",
+      "padding:6px 8px", "border-radius:6px", "pointer-events:none",
       "box-shadow:0 2px 12px rgba(0,0,0,.5)", "word-break:break-all"
     ].join(";");
 
-    // 关闭按钮
+    // 关闭按钮需单独可点
     const close = document.createElement("span");
     close.textContent = "✕";
-    close.style.cssText = "position:absolute;top:4px;right:8px;cursor:pointer;color:#f55;font-size:13px";
+    close.style.cssText =
+      "position:absolute;top:4px;right:8px;cursor:pointer;color:#f55;font-size:13px;pointer-events:auto;z-index:1";
     close.onclick = () => { panel.style.display = "none"; };
     panel.appendChild(close);
 
@@ -1005,10 +1007,11 @@ function fillAndSendFromLocalStorage() {
     return;
   }
 
+  // 仅当近期已成功发送时才去重；failed / 过期 sending 应允许自动重试，否则会与超时后的 writeChatSendRecord("failed") 形成死锁（轮询一直跳过直到 MAX_TRIES）
   const recentRecord = getRecentChatSendRecord(chatSignature);
-  if (recentRecord) {
+  if (recentRecord && recentRecord.status === "sent") {
     window.__bossAiLog(
-      `⏳ 当前会话近期已处理过同一条消息（状态=${recentRecord.status}），跳过重复发送。`
+      "⏳ 当前会话近期已成功发送过同一条消息，跳过重复发送。"
     );
     return;
   }
